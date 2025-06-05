@@ -15,7 +15,7 @@ import numpy as np
 from runstats import Statistics
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 
-from fastmri.data import transforms
+from fastmrinew.data import transforms
 
 
 def mse(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:

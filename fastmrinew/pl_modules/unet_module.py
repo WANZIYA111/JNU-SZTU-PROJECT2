@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 import torch
 from torch.nn import functional as F
 
-from fastmri.models import Unet
+from fastmrinew.models import Unet
 
 from .mri_module import MriModule
 

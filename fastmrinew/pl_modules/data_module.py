@@ -12,8 +12,8 @@ from typing import Callable, Optional, Union
 import pytorch_lightning as pl
 import torch
 
-import fastmri
-from fastmri.data import CombinedSliceDataset, SliceDataset
+import fastmrinew
+from fastmrinew.data import CombinedSliceDataset, SliceDataset
 
 
 def worker_init_fn(worker_id):
@@ -269,7 +269,7 @@ class FastMriDataModule(pl.LightningDataModule):
             if is_train:
                 sampler = torch.utils.data.DistributedSampler(dataset)
             else:
-                sampler = fastmri.data.VolumeSampler(dataset, shuffle=False)
+                sampler = fastmrinew.data.VolumeSampler(dataset, shuffle=False)
 
         dataloader = torch.utils.data.DataLoader(
             dataset=dataset,

@@ -9,9 +9,9 @@ from argparse import ArgumentParser
 
 import torch
 
-import fastmri
-from fastmri.data import transforms
-from fastmri.models import VarNet
+import fastmrinew
+from fastmrinew.data import transforms
+from fastmrinew.models import VarNet
 
 from .mri_module import MriModule
 
@@ -90,7 +90,7 @@ class VarNetModule(MriModule):
             pools=self.pools,
         )
 
-        self.loss = fastmri.SSIMLoss()
+        self.loss = fastmrinew.SSIMLoss()
 
     def forward(self, masked_kspace, mask, num_low_frequencies):
         return self.varnet(masked_kspace, mask, num_low_frequencies)

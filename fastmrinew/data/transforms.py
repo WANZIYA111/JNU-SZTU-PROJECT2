@@ -10,7 +10,7 @@ from typing import Dict, NamedTuple, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 
-import fastmri
+import fastmrinew
 
 from .subsample import MaskFunc
 
@@ -344,7 +344,7 @@ class UnetDataTransform:
             masked_kspace = kspace_torch
 
         # inverse Fourier transform to get zero filled solution
-        image = fastmri.ifft2c(masked_kspace)
+        image = fastmrinew.ifft2c(masked_kspace)
 
         # crop input to correct size
         if target is not None:
@@ -359,11 +359,11 @@ class UnetDataTransform:
         image = complex_center_crop(image, crop_size)
 
         # absolute value
-        image = fastmri.complex_abs(image)
+        image = fastmrinew.complex_abs(image)
 
         # apply Root-Sum-of-Squares if multicoil data
         if self.which_challenge == "multicoil":
-            image = fastmri.rss(image)
+            image = fastmrinew.rss(image)
 
         # normalize input
         image, mean, std = normalize_instance(image, eps=1e-11)
@@ -627,8 +627,8 @@ class MiniCoilTransform:
 
         # new cropping section
         square_crop = (attrs["recon_size"][0], attrs["recon_size"][1])
-        kspace = fastmri.fft2c(
-            complex_center_crop(fastmri.ifft2c(to_tensor(kspace)), square_crop)
+        kspace = fastmrinew.fft2c(
+            complex_center_crop(fastmrinew.ifft2c(to_tensor(kspace)), square_crop)
         ).numpy()
         kspace = complex_center_crop(kspace, crop_size)
 
@@ -636,7 +636,7 @@ class MiniCoilTransform:
         # simulation to be one where we have a 15-coil, low-resolution image
         # and our reconstructor has an SVD coil approximation. This is a little
         # bit more realistic than doing the target after SVD compression
-        target = fastmri.rss_complex(fastmri.ifft2c(to_tensor(kspace)))
+        target = fastmrinew.rss_complex(fastmrinew.ifft2c(to_tensor(kspace)))
         max_value = target.max()
 
         # apply coil compression

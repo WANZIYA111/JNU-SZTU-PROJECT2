@@ -12,8 +12,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import fastmri
-from fastmri.data import transforms
+import fastmrinew
+from fastmrinew.data import transforms
 
 from .unet import Unet
 
@@ -176,7 +176,7 @@ class SensitivityModel(nn.Module):
         return x.view(batch_size, c, h, w, comp)
 
     def divide_root_sum_of_squares(self, x: torch.Tensor) -> torch.Tensor:
-        return x / fastmri.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
+        return x / fastmrinew.rss_complex(x, dim=1).unsqueeze(-1).unsqueeze(1)
 
     def get_pad_and_num_low_freqs(
         self, mask: torch.Tensor, num_low_frequencies: Optional[int] = None
@@ -215,7 +215,7 @@ class SensitivityModel(nn.Module):
             )
 
         # convert to image space
-        images, batches = self.chans_to_batch_dim(fastmri.ifft2c(masked_kspace))
+        images, batches = self.chans_to_batch_dim(fastmrinew.ifft2c(masked_kspace))
 
         # estimate sensitivities
         return self.divide_root_sum_of_squares(
@@ -276,7 +276,7 @@ class VarNet(nn.Module):
         for cascade in self.cascades:
             kspace_pred = cascade(kspace_pred, masked_kspace, mask, sens_maps)
 
-        return fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1)
+        return fastmrinew.rss(fastmrinew.complex_abs(fastmrinew.ifft2c(kspace_pred)), dim=1)
 
 
 class VarNetBlock(nn.Module):
@@ -300,11 +300,11 @@ class VarNetBlock(nn.Module):
         self.dc_weight = nn.Parameter(torch.ones(1))
 
     def sens_expand(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return fastmri.fft2c(fastmri.complex_mul(x, sens_maps))
+        return fastmrinew.fft2c(fastmrinew.complex_mul(x, sens_maps))
 
     def sens_reduce(self, x: torch.Tensor, sens_maps: torch.Tensor) -> torch.Tensor:
-        return fastmri.complex_mul(
-            fastmri.ifft2c(x), fastmri.complex_conj(sens_maps)
+        return fastmrinew.complex_mul(
+            fastmrinew.ifft2c(x), fastmrinew.complex_conj(sens_maps)
         ).sum(dim=1, keepdim=True)
 
     def forward(

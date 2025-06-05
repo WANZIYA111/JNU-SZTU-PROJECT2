@@ -14,8 +14,8 @@ import pytorch_lightning as pl
 import torch
 from torchmetrics.metric import Metric
 
-import fastmri
-from fastmri import evaluate
+import fastmrinew
+from fastmrinew import evaluate
 
 
 class DistributedMetricSum(Metric):
@@ -241,7 +241,7 @@ class MriModule(pl.LightningModule):
             save_path = pathlib.Path.cwd() / "reconstructions"
         self.print(f"Saving reconstructions to {save_path}")
 
-        fastmri.save_reconstructions(outputs, save_path)
+        fastmrinew.save_reconstructions(outputs, save_path)
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no-cover
