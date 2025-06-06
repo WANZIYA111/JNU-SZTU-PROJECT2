@@ -10,3 +10,4 @@ from .policy import StraightThroughPolicy
 from .unet import Unet
 from .varnet import NormUnet, SensitivityModel, VarNet, VarNetBlock
 from .varnet_Acs2SensModel import SensitivityModel1, VarNet1
+from .varnet_NoAcs2SensModel import SensitivityModelNoAcs,VarNetNoAcs
