@@ -9,3 +9,4 @@ from .data_module import FastMriDataModule
 from .mri_module import MriModule
 from .unet_module import UnetModule
 from .varnet_module import VarNetModule
+from .varnet_module_Noacs2Recon import VarNetModule1

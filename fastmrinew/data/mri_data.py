@@ -32,7 +32,7 @@ import requests
 import torch
 import yaml
 from tqdm import tqdm
-
+from .mrfftv2 import fft2c,ifft2c,center_crop
 
 def et_query(
     root: etree.Element,
@@ -388,7 +388,8 @@ class SliceDataset(torch.utils.data.Dataset):
             mask = np.asarray(hf["mask"]) if "mask" in hf else None
 
             target = hf[self.recons_key][dataslice] if self.recons_key in hf else None
-
+            kspace = fft2c(center_crop(ifft2c(kspace),target.shape))
+            kspace = kspace.astype(np.complex64)
             attrs = dict(hf.attrs)
             attrs.update(metadata)
 
