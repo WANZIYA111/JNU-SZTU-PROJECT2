@@ -237,6 +237,7 @@ class MriModuleV2(pl.LightningModule):
         self.log("validation_loss", val_loss / tot_slice_examples, prog_bar=True, sync_dist=True)
         for metric, value in metrics.items():
             self.log(f"val_{metric}", value / tot_examples, sync_dist=True)
+            self.log(f"val_metrics/{metric}", value / tot_examples, sync_dist=True)
         for metric, value in metrics.items():
             self.print(f"current val_{metric}", value/tot_examples)
         self.val_log_outputs.clear()  # clear the log outputs for the next epoch
