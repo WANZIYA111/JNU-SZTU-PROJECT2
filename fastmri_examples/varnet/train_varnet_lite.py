@@ -11,10 +11,10 @@ from argparse import ArgumentParser
 
 import pytorch_lightning as pl
 
-from fastmrinew.data.mri_data import fetch_dir
-from fastmrinew.data.subsample import create_mask_for_mask_type
-from fastmrinew.data.transforms import VarNetDataTransform
-from fastmrinew.pl_modules import FastMriDataModule, VarNetModule
+from fastmri.data.mri_data import fetch_dir
+from fastmri.data.subsample import create_mask_for_mask_type
+from fastmri.data.transforms import VarNetDataTransform
+from fastmri.pl_modules import FastMriDataModule, VarNetModule
 
 
 def cli_main(args):
@@ -84,12 +84,12 @@ def build_args():
     # basic args
     path_config = pathlib.Path("../../fastmri_dirs.yaml")
     backend = "ddp"
-    num_gpus = 2 if backend == "ddp" else 1
+    num_gpus = 4 if backend == "ddp" else 1
     batch_size = 1
 
     # set defaults based on optional directory config
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "varnet" / "varnet_demo"
+    default_root_dir = fetch_dir("log_path", path_config) / "varnet" / "varnet_1cascade_4gpu"
 
     # client arguments
     parser.add_argument(
@@ -136,7 +136,7 @@ def build_args():
     # module config
     parser = VarNetModule.add_model_specific_args(parser)
     parser.set_defaults(
-        num_cascades=8,  # number of unrolled iterations
+        num_cascades=1,  # number of unrolled iterations
         pools=4,  # number of pooling layers for U-Net
         chans=18,  # number of top-level channels for U-Net
         sens_pools=4,  # number of pooling layers for sense est. U-Net
@@ -156,7 +156,7 @@ def build_args():
         seed=42,  # random seed
         deterministic=True,  # makes things slower, but deterministic
         default_root_dir=default_root_dir,  # directory for logs and checkpoints
-        max_epochs=30,  # max number of epochs
+        max_epochs=100,  # max number of epochs
     )
 
     args = parser.parse_args()

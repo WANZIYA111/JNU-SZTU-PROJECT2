@@ -68,7 +68,7 @@ class MriModule(pl.LightningModule):
         self.TotExamples = DistributedMetricSum()
         self.TotSliceExamples = DistributedMetricSum()
 
-    def validation_step_end(self, val_logs):
+    def validation_step_end(self, val_logs, batch=None, batch_idx=None, dataloader_idx=0):
         # check inputs
         for k in (
             "batch_idx",
