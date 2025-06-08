@@ -79,7 +79,16 @@ def cli_main(args):
     )
 
     # ---- Run ----
+    if args.ckpt_path is not None:
+        print("loading model from checkpoint:", args.ckpt_path)
+        print("This will override the model's weights with those from the checkpoint.")
+        model = VarNetModule.load_from_checkpoint(args.ckpt_path)
+    else:
+        print("No checkpoint path provided, using model without loading weights.")
     if args.mode == "train":
+        import torch
+        matmul_precision = "highest" if args.precision == "32-true" else "medium"
+        torch.set_float32_matmul_precision(matmul_precision)
         trainer.fit(model, datamodule=data_module)
     elif args.mode == "test":
         trainer.test(model, datamodule=data_module)
@@ -100,7 +109,8 @@ def build_args():
 
     # mode
     parser.add_argument("--mode", default="train", choices=("train","test"))
-
+    parser.add_argument("--ckpt_path", type=str, default=None,
+                        help="Path to a checkpoint file to load for testing")
     # mask
     parser.add_argument("--mask_type", choices=("random","equispaced_fraction"), default="equispaced_fraction")
     parser.add_argument("--center_fractions", nargs="+", type=float, default=[0.08])
@@ -165,7 +175,7 @@ def build_args():
     args = parser.parse_args()
     cb = pl.callbacks.ModelCheckpoint(
         dirpath=Path(args.default_root_dir)/"checkpoints",
-        filename="varnet-{epoch:02d}-{val_loss:.4f}",
+        filename="varnet-{epoch:02d}-{val_metrics/psnr:.2f}",
         save_top_k=1,
         monitor="validation_loss",
         mode="min",

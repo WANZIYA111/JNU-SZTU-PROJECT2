@@ -63,6 +63,7 @@ class MriModuleV2(pl.LightningModule):
         self.num_log_images = num_log_images
         self.val_log_indices = None
         self.val_log_outputs = [] # added for upgrade to Lightning 2.0
+        self.test_logs = []  # for test_step, to be used in on_test_epoch_end
         self.save_hyperparameters()
         # metrics for validation
         # these metrics are summed across all processes in distributed training
@@ -236,23 +237,44 @@ class MriModuleV2(pl.LightningModule):
         self.log("validation_loss", val_loss / tot_slice_examples, prog_bar=True, sync_dist=True)
         for metric, value in metrics.items():
             self.log(f"val_metrics/{metric}", value / tot_examples, sync_dist=True)
-            self.print(f"val_metrics/{metric}={value / tot_examples}")
+        for metric, value in metrics.items():
+            self.print(f"current val_{metric}", value/tot_examples)
         self.val_log_outputs.clear()  # clear the log outputs for the next epoch
         
-
-    def on_test_epoch_end(self, test_logs):
+    # in lightning 2.x, this function take no input, 
+    # so we need to store test_logs manually
+    def on_test_epoch_end(self):
         outputs = defaultdict(dict)
+        ssim_vals = defaultdict(list)
+        psnr_vals = defaultdict(list)
 
         # use dicts for aggregation to handle duplicate slices in ddp mode
-        for log in test_logs:
+        for log in self.test_logs:
             for i, (fname, slice_num) in enumerate(zip(log["fname"], log["slice"])):
                 outputs[fname][int(slice_num.cpu())] = log["output"][i]
+                # collect metrics if present
+                if "test_ssim" in log:
+                    ssim_vals[fname].append(log["test_ssim"][i])
+                if "test_psnr" in log:
+                    psnr_vals[fname].append(log["test_psnr"][i])
 
         # stack all the slices for each file
         for fname in outputs:
             outputs[fname] = np.stack(
                 [out for _, out in sorted(outputs[fname].items())]
             )
+
+        # Aggregate metrics
+        all_ssim = [np.mean(ssim_vals[fname]) for fname in ssim_vals if ssim_vals[fname]]
+        all_psnr = [np.mean(psnr_vals[fname]) for fname in psnr_vals if psnr_vals[fname]]
+        mean_ssim = np.mean(all_ssim) if all_ssim else float('nan')
+        mean_psnr = np.mean(all_psnr) if all_psnr else float('nan')
+
+        self.print(f"Test SSIM: {mean_ssim:.4f}")
+        self.print(f"Test PSNR: {mean_psnr:.2f}")
+
+        self.log("test_metrics/ssim", mean_ssim)
+        self.log("test_metrics/psnr", mean_psnr)
 
         # pull the default_root_dir if we have a trainer, otherwise save to cwd
         if hasattr(self, "trainer"):
@@ -399,12 +421,39 @@ class VarNetModuleV2(MriModuleV2):
             crop_size = batch.crop_size
 
         output = transforms.center_crop(output, crop_size)
+        output_np = output.cpu().numpy()
 
-        return {
-            "fname": batch.fname,
-            "slice": batch.slice_num,
-            "output": output.cpu().numpy(),
-        }
+        if batch.target is not None:
+            target = transforms.center_crop(batch.target, crop_size)
+            # Compute metrics
+            target_np = target.cpu().numpy()
+            maxval = batch.max_value.cpu().numpy()
+            test_ssim = []
+            test_psnr = []
+            # Compute SSIM and PSNR for each slice
+            # Note: evaluate.ssim expect 3D tensors, so we add a batch dimension
+            for i in range(len(output_np)):
+                test_ssim.append(evaluate.ssim(target_np[i][None,...], output_np[i][None,...], maxval=maxval))
+                test_psnr.append(20 * np.log10(maxval) - 10 * np.log10(evaluate.mse(target_np[i], output_np[i])))
+
+            current_test_log = {
+            "fname": batch.fname,            # old key
+            "slice": batch.slice_num,        # old key
+            "output": output_np,             # old key
+            # new keys for metrics
+            "test_ssim": test_ssim,
+            "test_psnr": test_psnr,
+            }
+        else:
+            # If no target is provided, we cannot compute metrics
+            current_test_log = {
+            "fname": batch.fname,            # old key
+            "slice": batch.slice_num,        # old key
+            "output": output_np,             # old key
+            }
+
+        self.test_logs.append(current_test_log)
+        return current_test_log
 
     def configure_optimizers(self):
         optim = torch.optim.Adam(
