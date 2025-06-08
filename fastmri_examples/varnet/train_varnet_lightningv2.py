@@ -11,10 +11,10 @@ import pytorch_lightning as pl
 
 from fastmri.data.mri_data import fetch_dir
 from fastmri.data.subsample import create_mask_for_mask_type
-from fastmri.data.transforms import VarNetDataTransform
 import sys
 sys.path.append("./")
 from myfastmri.all import FastMriDataModuleV2 as FastMriDataModule
+from myfastmri.all import ScaledVarNetDataTransform
 from myfastmri.all import VarNetModuleV2 as VarNetModule
 
 
@@ -25,9 +25,10 @@ def cli_main(args):
     mask = create_mask_for_mask_type(
         args.mask_type, args.center_fractions, args.accelerations
     )
-    train_transform = VarNetDataTransform(mask_func=mask, use_seed=False)
-    val_transform   = VarNetDataTransform(mask_func=mask)
-    test_transform  = VarNetDataTransform(mask_func=mask)
+
+    train_transform = ScaledVarNetDataTransform(mask_func=mask, use_seed=False, scale=args.scale)
+    val_transform   = ScaledVarNetDataTransform(mask_func=mask, scale=args.scale)
+    test_transform  = ScaledVarNetDataTransform(mask_func=mask, scale=args.scale)
 
     data_module = FastMriDataModule(
         data_path=args.data_path,
@@ -107,6 +108,12 @@ def build_args():
 
     # data args
     parser = FastMriDataModule.add_data_specific_args(parser)
+    parser.add_argument(
+        "--scale",
+        type=float,
+        default=1.0,
+        help="Scale factor to multiply k-space and target images (use >1.0 for FP16)",
+    )
     parser.set_defaults(
         data_path=data_path,
         challenge="multicoil",

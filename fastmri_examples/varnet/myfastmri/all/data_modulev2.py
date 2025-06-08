@@ -13,6 +13,32 @@ from torch.utils.data import DataLoader
 # worker init unchanged
 from fastmri.pl_modules.data_module import worker_init_fn
 
+# fastmri/data/transforms.py
+from fastmri.data.transforms import VarNetDataTransform, VarNetSample
+
+class ScaledVarNetDataTransform(VarNetDataTransform):
+    """
+    Extends VarNetDataTransform by scaling masked_kspace and target.
+
+    Args:
+        mask_func: same as VarNetDataTransform
+        use_seed: same as VarNetDataTransform
+        scale: factor by which to multiply k-space and target tensors
+    """
+    def __init__(self, mask_func=None, use_seed=True, scale: float = 1.0):
+        super().__init__(mask_func=mask_func, use_seed=use_seed)
+        self.scale = scale
+
+    def __call__(self, kspace, mask, target, attrs, fname, slice_num):
+        # Scale target if it exists
+        attrs["max"] = attrs.get("max", 1.0)* self.scale  # Ensure max is set
+        if target is not None:
+            sample: VarNetSample = super().__call__(kspace* self.scale, mask, target* self.scale, attrs, fname, slice_num)
+        else:
+            sample: VarNetSample = super().__call__(kspace* self.scale, mask, target, attrs, fname, slice_num)
+
+        return sample
+
 class FastMriDataModuleV2(pl.LightningDataModule):
     """
     Lightning 2.x DataModule for fastMRI using inheritance from the original FastMriDataModule.
