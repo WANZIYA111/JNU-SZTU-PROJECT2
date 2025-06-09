@@ -76,6 +76,7 @@ def cli_main(args):
         callbacks=args.callbacks,
         log_every_n_steps=args.log_every_n_steps,
         enable_progress_bar=True,
+        check_val_every_n_epoch=3
     )
 
     # ---- Run ----
@@ -175,7 +176,7 @@ def build_args():
     args = parser.parse_args()
     cb = pl.callbacks.ModelCheckpoint(
         dirpath=Path(args.default_root_dir)/"checkpoints",
-        filename="varnet-16-mixed-{epoch:02d}-{val_psnr:.2f}",
+        filename="varnet-16-mixed-6gpus-{epoch:02d}-{val_psnr:.2f}",
         save_top_k=1,
         monitor="val_psnr",
         mode="max",
