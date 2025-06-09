@@ -19,7 +19,7 @@ from .unet import Unet
 from .varnet import NormUnet,VarNetBlock
 
 
-class SensitivityModel1(nn.Module):
+class SensitivityModelSENSE(nn.Module):
     """
     Model for learning sensitivity estimation from k-space data.
 
@@ -100,7 +100,7 @@ class SensitivityModel1(nn.Module):
         mask: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
-        # device = masked_kspace.device
+        device = masked_kspace.device
         if self.mask_center:
             pad, num_low_freqs = self.get_pad_and_num_low_freqs(
                 mask, num_low_frequencies
@@ -109,22 +109,22 @@ class SensitivityModel1(nn.Module):
                 masked_kspace, pad, pad + num_low_freqs
             )
         pd = 30
-        ACS_MASK = torch.zeros(masked_kspace.shape).to(masked_kspace.device)
+        ACS_MASK = torch.zeros(masked_kspace.shape).to(device)
         h = int(masked_kspace.shape[-3])
         w = int(masked_kspace.shape[-2])
         ACS_MASK[...,int(h/2)-pd:int(h/2)+pd,int(w/2)-pd:int(w/2)+pd,:] = 1
         ACS_kspace = masked_kspace*ACS_MASK
         # convert to image space
-        images, batches = self.chans_to_batch_dim(fastmri.ifft2c(ACS_kspace))
-        np.save('ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
+        images, batches = self.chans_to_batch_dim(fastmri.ifft2c(ACS_kspace.to(device)))
+        # np.save('ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
         del masked_kspace, mask,ACS_MASK,ACS_kspace
         # estimate sensitivities
         return self.divide_root_sum_of_squares(
             self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
-        )
+        ),ACS_kspace
 
 
-class VarNet1(nn.Module):
+class SENSE(nn.Module):
     """
     A full variational network model.
 
@@ -134,6 +134,7 @@ class VarNet1(nn.Module):
 
     def __init__(
         self,
+        racc:int,
         num_cascades: int = 12,
         sens_chans: int = 8,
         sens_pools: int = 4,
@@ -156,14 +157,12 @@ class VarNet1(nn.Module):
         """
         super().__init__()
 
-        self.sens_net = SensitivityModel1(
+        self.sens_net = SensitivityModelSENSE(
             chans=sens_chans,
             num_pools=sens_pools,
             mask_center=mask_center,
         )
-        self.cascades = nn.ModuleList(
-            [VarNetBlock(NormUnet(chans, pools)) for _ in range(num_cascades)]
-        )
+        self.racc = racc
 
     def forward(
         self,
@@ -173,12 +172,16 @@ class VarNet1(nn.Module):
         real_mask: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
-        sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
-        kspace_pred = real_masked_kspace.clone()
-
-        for cascade in self.cascades:
-            kspace_pred = cascade(kspace_pred,real_masked_kspace, real_mask, sens_maps)
-
-        return fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1),sens_maps
+        device = real_masked_kspace.device
+        sens_maps,ACS_kspace = self.sens_net(masked_kspace, mask, num_low_frequencies)
+        R = self.racc
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:",R)
+        acc_factor = torch.tensor(R)
+        sense_kspace = torch.view_as_complex(real_masked_kspace).permute(0,2,3,1)
+        
+        sense_sens = torch.view_as_complex(sens_maps).permute(0,2,3,1)
+        image = SENSE(sense_kspace,sense_sens,acc_factor)#image [batch,x,y]
+        ## 输入inp和csm形状应为 [batch, kx, ky, coil]
+        return (abs(image).float())/(abs(image).max()),sens_maps,ACS_kspace,real_masked_kspace
 
 

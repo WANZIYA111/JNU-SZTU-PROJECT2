@@ -7,4 +7,5 @@ LICENSE file in the root directory of this source tree.
 
 from .mri_data import CombinedSliceDataset, SliceDataset
 from .mri_data_NoAcs import SliceDataset_NoAcs
+from .mri_data_SENSE import SliceDatasetSense
 from .volume_sampler import VolumeSampler

@@ -12,3 +12,4 @@ from .varnet_module import VarNetModule
 from .varnet_module_Noacs2Recon import VarNetModule1
 from .varnet_module_Noacs2SensARecon import VarNetModule_noacs
 from .data_module_NoAcs2SensModel import FastMriDataModule_NoAcs
+from .SENSE_module import SENSEModule

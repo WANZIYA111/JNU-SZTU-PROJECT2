@@ -116,7 +116,7 @@ class SensitivityModel1(nn.Module):
         ACS_kspace = masked_kspace*ACS_MASK
         # convert to image space
         images, batches = self.chans_to_batch_dim(fastmri.ifft2c(ACS_kspace))
-        # np.save('ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
+        np.save('ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
         del masked_kspace, mask,ACS_MASK,ACS_kspace
         # estimate sensitivities
         return self.divide_root_sum_of_squares(

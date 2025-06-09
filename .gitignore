@@ -23,3 +23,4 @@ dist/
 fastmri/_version.py
 *.h5
 fastmri_examples/varnet/COIL_FASTMRI_noshift_50/
+**/.ipynb_checkpoints/*
