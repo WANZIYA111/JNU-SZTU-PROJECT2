@@ -175,7 +175,7 @@ def build_args():
     args = parser.parse_args()
     cb = pl.callbacks.ModelCheckpoint(
         dirpath=Path(args.default_root_dir)/"checkpoints",
-        filename="varnet-{epoch:02d}-{val_psnr:.2f}",
+        filename="varnet-16-mixed-{epoch:02d}-{val_psnr:.2f}",
         save_top_k=1,
         monitor="val_psnr",
         mode="max",
