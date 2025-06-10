@@ -26,3 +26,4 @@ fastmri_examples/varnet/COIL_FASTMRI_noshift_50/
 **/.ipynb_checkpoints/*
 *.ckpt
 **/.ipynb_checkpoints/
+*.npy

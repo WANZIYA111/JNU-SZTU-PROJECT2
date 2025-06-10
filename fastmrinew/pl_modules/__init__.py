@@ -10,6 +10,7 @@ from .mri_module import MriModule
 from .unet_module import UnetModule
 from .varnet_module import VarNetModule
 from .varnet_module_Noacs2Recon import VarNetModule1
+from .varnet_module_Noacs2ReconV2 import VarNetModule1V2
 from .varnet_module_Noacs2SensARecon import VarNetModule_noacs
 from .data_module_NoAcs2SensModel import FastMriDataModule_NoAcs
 from .SENSE_module import SENSEModule
