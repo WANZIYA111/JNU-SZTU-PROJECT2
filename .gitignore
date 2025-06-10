@@ -27,3 +27,4 @@ fastmri_examples/varnet/COIL_FASTMRI_noshift_50/
 *.ckpt
 **/.ipynb_checkpoints/
 *.npy
+fastmri_examples/varnet/output/recon/file_brain_AXT2_200_2000031.h5_0.npy

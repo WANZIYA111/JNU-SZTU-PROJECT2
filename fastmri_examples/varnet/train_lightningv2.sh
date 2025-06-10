@@ -1,1 +1,0 @@
-python train_varnet_lightningv2.py --data_path "/data3/COIL_FASTMRI_noshift_50/" --num_worker 1 --devices 4
