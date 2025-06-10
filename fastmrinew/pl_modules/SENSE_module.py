@@ -11,12 +11,12 @@ import torch
 
 import fastmrinew
 from fastmrinew.data import transforms
-from fastmrinew.models import SENSE
+from fastmrinew.models import SENSEModel
 
-from .mri_module import MriModule
+from .mri_moduleV2 import MriModuleV2
 
 
-class SENSEModule(MriModule):
+class SENSEModule(MriModuleV2):
     """
     VarNet training module.
 
@@ -85,7 +85,7 @@ class SENSEModule(MriModule):
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
 
-        self.sense = SENSE(
+        self.sense = SENSEModel(
             racc = self.racc,
             num_cascades=self.num_cascades,
             sens_chans=self.sens_chans,
@@ -121,7 +121,7 @@ class SENSEModule(MriModule):
     def validation_step(self, batch, batch_idx):
         output,sens_maps,acs_kspace0,masked_kspace0= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
         target, output = transforms.center_crop_to_smallest(batch.target, output)
-        np.save('batch.real_masked_kspace',torch.view_as_complex(batch.real_masked_kspace).detach().cpu().numpy())
+        np.save('SENSE.real_masked_kspace',torch.view_as_complex(batch.real_masked_kspace).detach().cpu().numpy())
         
         output_dir = "output"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
@@ -196,7 +196,7 @@ class SENSEModule(MriModule):
         Define parameters that only apply to this model
         """
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser = MriModule.add_model_specific_args(parser)
+        parser = MriModuleV2.add_model_specific_args(parser)
 
         # param overwrites
 

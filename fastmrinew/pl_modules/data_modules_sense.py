@@ -1,3 +1,10 @@
+"""
+Copyright (c) Facebook, Inc. and its affiliates.
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.
+"""
+
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Callable, Optional, Union
@@ -8,10 +15,10 @@ import sys
 sys.path.append('/home/jupyter-wangyuwan/wangyuwan/fastmri--varnet/JNU_SZTU_PROJECT/ZGRAPPA_model_work/fastMRI')
 import fastmrinew
 from fastmrinew.data import CombinedSliceDataset
-from fastmrinew.data.mri_data_NoAcs import SliceDataset_NoAcs
+from fastmrinew.data.mri_data_SENSE import SliceDatasetSense
 from .data_module import worker_init_fn,_check_both_not_none
 
-class FastMriDataModule_NoAcs(pl.LightningDataModule):
+class FastMriDataModuleSENSE(pl.LightningDataModule):
     """
     Data module class for fastMRI data sets.
 
@@ -28,7 +35,6 @@ class FastMriDataModule_NoAcs(pl.LightningDataModule):
     def __init__(
         self,
         data_path: Path,
-        racc:int,
         challenge: str,
         train_transform: Callable,
         val_transform: Callable,
@@ -106,7 +112,6 @@ class FastMriDataModule_NoAcs(pl.LightningDataModule):
             )
 
         self.data_path = data_path
-        self.racc = racc
         self.challenge = challenge
         self.train_transform = train_transform
         self.val_transform = val_transform
@@ -168,7 +173,7 @@ class FastMriDataModule_NoAcs(pl.LightningDataModule):
                 raw_sample_filter = self.test_filter
 
         # if desired, combine train and val together for the train split
-        dataset: Union[SliceDataset_NoAcs, CombinedSliceDataset]
+        dataset: Union[SliceDatasetSense, CombinedSliceDataset]
         if is_train and self.combine_train_val:
             data_paths = [
                 self.data_path / f"{self.challenge}_train",
@@ -196,9 +201,8 @@ class FastMriDataModule_NoAcs(pl.LightningDataModule):
             else:
                 data_path = self.data_path / f"{self.challenge}_{data_partition}"
 
-            dataset = SliceDataset_NoAcs(
+            dataset =SliceDatasetSense(
                 root=data_path,
-                racc=self.racc,
                 transform=data_transform,
                 sample_rate=sample_rate,
                 volume_sample_rate=volume_sample_rate,
@@ -251,9 +255,8 @@ class FastMriDataModule_NoAcs(pl.LightningDataModule):
                 # NOTE: Fixed so that val and test use correct sample rates
                 sample_rate = self.sample_rate  # if i == 0 else 1.0
                 volume_sample_rate = self.volume_sample_rate  # if i == 0 else None
-                _ = SliceDataset_NoAcs(
+                _ = SliceDatasetSense(
                     root=data_path,
-                    racc=self.racc,
                     transform=data_transform,
                     sample_rate=sample_rate,
                     volume_sample_rate=volume_sample_rate,
@@ -286,8 +289,6 @@ class FastMriDataModule_NoAcs(pl.LightningDataModule):
             type=Path,
             help="Path to fastMRI data root",
         )
-
-
         parser.add_argument(
             "--test_path",
             default=None,
@@ -385,4 +386,5 @@ class FastMriDataModule_NoAcs(pl.LightningDataModule):
             type=int,
             help="Number of workers to use in data loader",
         )
+
         return parser

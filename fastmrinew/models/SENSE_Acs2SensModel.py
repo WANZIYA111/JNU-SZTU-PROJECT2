@@ -4,14 +4,15 @@ Copyright (c) Facebook, Inc. and its affiliates.
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
-
+import sys
+sys.path.append('/home/jupyter-wangyuwan/wangyuwan/fastmri--varnet/JNU_SZTU_PROJECT/ZGRAPPA_model_work/fastMRI')
 import math
 from typing import List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from fastmrinew.models.fast_sense import SENSE
 import fastmri
 from fastmri.data import transforms
 
@@ -116,15 +117,15 @@ class SensitivityModelSENSE(nn.Module):
         ACS_kspace = masked_kspace*ACS_MASK
         # convert to image space
         images, batches = self.chans_to_batch_dim(fastmri.ifft2c(ACS_kspace.to(device)))
-        # np.save('ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
-        del masked_kspace, mask,ACS_MASK,ACS_kspace
+        np.save('SENSE_ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
+        del masked_kspace, mask,ACS_MASK
         # estimate sensitivities
         return self.divide_root_sum_of_squares(
             self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
         ),ACS_kspace
 
 
-class SENSE(nn.Module):
+class SENSEModel(nn.Module):
     """
     A full variational network model.
 
@@ -175,7 +176,7 @@ class SENSE(nn.Module):
         device = real_masked_kspace.device
         sens_maps,ACS_kspace = self.sens_net(masked_kspace, mask, num_low_frequencies)
         R = self.racc
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:",R)
+        # print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:",R)
         acc_factor = torch.tensor(R)
         sense_kspace = torch.view_as_complex(real_masked_kspace).permute(0,2,3,1)
         
