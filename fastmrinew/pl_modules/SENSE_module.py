@@ -158,8 +158,8 @@ class SENSEModule(MriModuleV2):
             "fname": batch.fname,
             "slice_num": batch.slice_num,
             "max_value": batch.max_value,
-            "output": output,
-            "target": target,
+            "output": output/output.max(),
+            "target": target/target.max(),
             "val_loss": val_mse_loss,
         }
 

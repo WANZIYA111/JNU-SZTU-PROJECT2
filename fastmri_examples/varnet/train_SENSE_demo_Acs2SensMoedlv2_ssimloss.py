@@ -5,11 +5,12 @@ import pathlib
 from argparse import ArgumentParser
 
 import pytorch_lightning as pl
+
 from torch.serialization import add_safe_globals
 from fastmrinew.data.mri_data import fetch_dir
 from fastmrinew.data.subsample import create_mask_for_mask_type
-from fastmrinew.data.transforms_NoAcs import VarNetDataTransform_NOACS as VarNetDataTransform1
-from fastmrinew.pl_modules import FastMriDataModule_NoAcs as FastMriDataModule, VarNetModule_noacsV2 as VarNetModule_noacs
+from fastmrinew.data.transforms_acs_SENSE import SENSEDataTransform
+from fastmrinew.pl_modules import FastMriDataModuleSENSE as FastMriDataModule, SENSEModule_ssimloss as SENSEModule
 
 add_safe_globals([pathlib.PosixPath])
 
@@ -22,13 +23,12 @@ def cli_main(args):
     mask = create_mask_for_mask_type(
         args.mask_type, args.center_fractions, args.accelerations
     )
-    train_transform = VarNetDataTransform1(args.racc, mask_func=mask, use_seed=False)
-    val_transform = VarNetDataTransform1(args.racc, mask_func=mask)
-    test_transform = VarNetDataTransform1(args.racc)
+    train_transform = SENSEDataTransform(args.racc, mask_func=mask, use_seed=False)
+    val_transform = SENSEDataTransform(args.racc, mask_func=mask)
+    test_transform = SENSEDataTransform(args.racc)
 
     data_module = FastMriDataModule(
         data_path=args.data_path,
-        racc=args.racc,
         challenge=args.challenge,
         train_transform=train_transform,
         val_transform=val_transform,
@@ -44,7 +44,8 @@ def cli_main(args):
     # ------------
     # model
     # ------------
-    model = VarNetModule_noacs(
+    model = SENSEModule(
+        racc=args.racc,
         num_cascades=args.num_cascades,
         pools=args.pools,
         chans=args.chans,
@@ -79,17 +80,19 @@ def cli_main(args):
     elif args.mode == "test":
         trainer.test(model, datamodule=data_module, ckpt_path=args.ckpt_path)
     else:
-        raise ValueError(f"Unknown mode {args.mode}")
+        raise ValueError(f"unrecognized mode {args.mode}")
 
 def build_args():
     parser = ArgumentParser()
 
-    # Basic config
+    # basic args
     path_config = pathlib.Path("../../fastmri_dirs.yaml")
+    backend = "ddp"
     batch_size = 1
     
+
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / f"varnet_default" / "noacs2sensitivity"
+    default_root_dir = fetch_dir("log_path", path_config) / "sense_train_ssim_loss" / "sense_demo"
 
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)
@@ -97,7 +100,7 @@ def build_args():
     parser.add_argument("--center_fractions", nargs="+", default=[0.15625], type=float)
     parser.add_argument("--accelerations", nargs="+", default=[3], type=int)
 
-    # Data config
+    # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
     parser.set_defaults(
         data_path=data_path,
@@ -107,10 +110,10 @@ def build_args():
         test_path=None,
     )
 
-    # Model config
-    parser = VarNetModule_noacs.add_model_specific_args(parser)
+    # module config
+    parser = SENSEModule.add_model_specific_args(parser)
     parser.set_defaults(
-        num_cascades=1,
+        num_cascades=8,
         pools=4,
         chans=18,
         sens_pools=4,
@@ -133,7 +136,7 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Checkpoint path for resume")
 
     args = parser.parse_args()
-    default_root_dir = fetch_dir("log_path", path_config) / f"varnet_{args.racc}" / "noacs2sensitivity"
+
     # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"
     if not checkpoint_dir.exists():

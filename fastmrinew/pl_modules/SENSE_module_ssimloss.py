@@ -11,13 +11,12 @@ import torch
 
 import fastmrinew
 from fastmrinew.data import transforms
+from fastmrinew.models import SENSEModel
 
-from fastmrinew.models import VarNetNoAcs
-
-from .mri_moduleV2 import MriModuleV2 as MriModule
+from .mri_moduleV2 import MriModuleV2
 
 
-class VarNetModule_noacsV2(MriModule):
+class SENSEModule_ssimloss(MriModuleV2):
     """
     VarNet training module.
 
@@ -35,6 +34,7 @@ class VarNetModule_noacsV2(MriModule):
 
     def __init__(
         self,
+        racc:int,
         num_cascades: int = 12,
         pools: int = 4,
         chans: int = 18,
@@ -46,6 +46,7 @@ class VarNetModule_noacsV2(MriModule):
         weight_decay: float = 0.0,
         **kwargs,
     ):
+        
         """
         Args:
             num_cascades: Number of cascades (i.e., layers) for variational
@@ -74,6 +75,7 @@ class VarNetModule_noacsV2(MriModule):
         self.save_hyperparameters()
 
         self.num_cascades = num_cascades
+        self.racc = racc
         self.pools = pools
         self.chans = chans
         self.sens_pools = sens_pools
@@ -83,7 +85,8 @@ class VarNetModule_noacsV2(MriModule):
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
 
-        self.varnet = VarNetNoAcs(
+        self.sense = SENSEModel(
+            racc = self.racc,
             num_cascades=self.num_cascades,
             sens_chans=self.sens_chans,
             sens_pools=self.sens_pools,
@@ -92,55 +95,74 @@ class VarNetModule_noacsV2(MriModule):
         )
 
         self.loss = fastmrinew.SSIMLoss()
+        
 
-    def forward(self, masked_kspace,real_masked_kspace,acs_kspace, mask, real_mask,num_low_frequencies):
-        return self.varnet(masked_kspace,real_masked_kspace, acs_kspace,mask, real_mask,num_low_frequencies)
+    def forward(self, masked_kspace,real_masked_kspace, mask, real_mask,num_low_frequencies):
+        return self.sense(masked_kspace,real_masked_kspace, mask, real_mask,num_low_frequencies)
 
     def training_step(self, batch, batch_idx):
-        output,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.acs_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
+        output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
 
         target, output = transforms.center_crop_to_smallest(batch.target, output)
+
         loss = self.loss(
-            output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
+                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
         )
-        
+
         self.log("train_loss", loss)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
-        output,sens_maps= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.acs_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
+        output,sens_maps,acs_kspace0,masked_kspace0= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         
-        np.save('varnet_batch.real_masked_kspace',torch.view_as_complex(batch.real_masked_kspace).detach().cpu().numpy())
-        
-        output_dir = "output_7x_varnet1cas_noacs2sens"
+        # print("batch.target",batch.target.shape)
+        output_dir = "sense_output_ssimloss"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")
         target_dir = os.path.join(output_dir, "target")
 
+        # 创建目录（如果不存在）
         os.makedirs(sens_maps_dir, exist_ok=True)
         os.makedirs(recon_dir, exist_ok=True)
         os.makedirs(target_dir, exist_ok=True)
 
+        # 构造文件路径
         sens_filename = os.path.join(sens_maps_dir, f'{batch.fname[0]}_{batch.slice_num[0]}.npy')
         recon_filename = os.path.join(recon_dir, f'{batch.fname[0]}_{batch.slice_num[0]}.npy')
         GT_filename = os.path.join(target_dir, f'{batch.fname[0]}_{batch.slice_num[0]}.npy')
 
+        # 保存文件
         np.save(sens_filename, torch.view_as_complex(sens_maps).detach().cpu().numpy())
         np.save(recon_filename, output.detach().cpu().numpy())
         np.save(GT_filename, target.detach().cpu().numpy())
+        
+        np.savez('sense_tmp_ssimloss.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target.detach().cpu().numpy())
+        
         
         return {
             "batch_idx": batch_idx,
             "fname": batch.fname,
             "slice_num": batch.slice_num,
             "max_value": batch.max_value,
-            "output": output,
-            "target": target,
+            "output": output/output.max(),
+            "target": target/target.max(),
             "val_loss": self.loss(
-                output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
+                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
             ),
         }
+
+    def test_step(self, batch, batch_idx):
+        output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
+
+        # check for FLAIR 203
+        if output.shape[-1] < batch.crop_size[1]:
+            crop_size = (output.shape[-1], output.shape[-1])
+        else:
+            crop_size = batch.crop_size
+
+        output = transforms.center_crop(output, crop_size)
 
     def test_step(self, batch, batch_idx):
         output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
@@ -175,14 +197,14 @@ class VarNetModule_noacsV2(MriModule):
         Define parameters that only apply to this model
         """
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser = MriModule.add_model_specific_args(parser)
+        parser = MriModuleV2.add_model_specific_args(parser)
 
         # param overwrites
 
         # network params
         parser.add_argument(
             "--num_cascades",
-            default=1,
+            default=12,
             type=int,
             help="Number of VarNet cascades",
         )

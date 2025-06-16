@@ -183,6 +183,6 @@ class SENSEModel(nn.Module):
         sense_sens = torch.view_as_complex(sens_maps).permute(0,2,3,1)
         image = SENSE(sense_kspace,sense_sens,acc_factor)#image [batch,x,y]
         ## 输入inp和csm形状应为 [batch, kx, ky, coil]
-        return (abs(image).float())/(abs(image).max()),sens_maps,ACS_kspace,real_masked_kspace
+        return abs(image).float(),sens_maps,ACS_kspace,real_masked_kspace
 
 

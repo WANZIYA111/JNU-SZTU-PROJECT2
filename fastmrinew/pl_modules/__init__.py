@@ -15,4 +15,5 @@ from .varnet_module_Noacs2SensARecon import VarNetModule_noacs
 from .varnet_module_Noacs2SensAReconV2 import VarNetModule_noacsV2
 from .data_module_NoAcs2SensModel import FastMriDataModule_NoAcs
 from .SENSE_module import SENSEModule
+from .SENSE_module_ssimloss import SENSEModule_ssimloss
 from .data_modules_sense import FastMriDataModuleSENSE
