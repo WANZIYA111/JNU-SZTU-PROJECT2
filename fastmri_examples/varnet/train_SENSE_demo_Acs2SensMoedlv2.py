@@ -92,7 +92,7 @@ def build_args():
     
 
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "sense_train" / "sense_demo"
+    default_root_dir = fetch_dir("log_path", path_config) / "sense_train_mse_loss" / "sense_demo"
 
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)

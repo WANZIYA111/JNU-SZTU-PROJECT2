@@ -112,18 +112,18 @@ class SENSEModule(MriModuleV2):
         
         mse_real = torch.nn.functional.mse_loss(sens_real, gold_real)
         mse_imag = torch.nn.functional.mse_loss(sens_imag, gold_imag)
-        mse_loss = mse_real + mse_imag
+        train_mse_loss = mse_real + mse_imag
         
-        self.log("train_loss", mse_loss)
+        self.log("train_loss", train_mse_loss)
 
-        return mse_loss
+        return train_mse_loss
 
     def validation_step(self, batch, batch_idx):
         output,sens_maps,acs_kspace0,masked_kspace0= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         np.save('SENSE.real_masked_kspace',torch.view_as_complex(batch.real_masked_kspace).detach().cpu().numpy())
-        
-        output_dir = "output"
+        # print("batch.target",batch.target.shape)
+        output_dir = "sense_output"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")
         target_dir = os.path.join(output_dir, "target")
@@ -149,9 +149,9 @@ class SENSEModule(MriModuleV2):
         
         mse_real = torch.nn.functional.mse_loss(sens_real, gold_real)
         mse_imag = torch.nn.functional.mse_loss(sens_imag, gold_imag)
-        mse_loss = mse_real + mse_imag
-        np.savez('tmp.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target.detach().cpu().numpy())
-        self.log("train_loss", mse_loss)
+        val_mse_loss = mse_real + mse_imag
+        np.savez('sense_tmp.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target.detach().cpu().numpy())
+        self.log("val_loss", val_mse_loss)
         
         return {
             "batch_idx": batch_idx,
@@ -160,7 +160,7 @@ class SENSEModule(MriModuleV2):
             "max_value": batch.max_value,
             "output": output,
             "target": target,
-            "val_loss": mse_loss,
+            "val_loss": val_mse_loss,
         }
 
     def test_step(self, batch, batch_idx):

@@ -52,6 +52,7 @@ def ismrm_calculate_sense_unmixing_1d(acc_factor, csm1d, noise_matrix_inv, regul
     block_csm = csm1d[indices,:]##torch.Size([128, 3, 16])
     def process_block(block_csm1d):
         A = block_csm1d.mT  # [nc, k]=[16,3]
+        valid = (torch.max(torch.abs(A)) > 0)
         AHA = A.conj().T @ noise_matrix_inv @ A
         diag_AHA = torch.diag(AHA)
         reduced_eye = torch.diag((torch.abs(diag_AHA) > 0).float())
@@ -60,7 +61,7 @@ def ismrm_calculate_sense_unmixing_1d(acc_factor, csm1d, noise_matrix_inv, regul
         scaled_reg_factor = regularization_factor * torch.trace(AHA) / n_alias
         
         inv_term = torch.linalg.pinv(AHA + reduced_eye * scaled_reg_factor)
-        return inv_term @ A.conj().T @ noise_matrix_inv
+        return (inv_term @ A.conj().T @ noise_matrix_inv)*valid.float()  
 
     all_blocks = vmap(process_block,in_dims=0)(block_csm) #torch.Size([128, 3, 16])
     unmix1d = torch.zeros((ny, nc), dtype=csm1d.dtype, device=csm1d.device)
