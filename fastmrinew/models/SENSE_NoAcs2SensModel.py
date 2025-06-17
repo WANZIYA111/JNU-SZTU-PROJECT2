@@ -21,7 +21,7 @@ from fastmri.data import transforms
 from .varnet import NormUnet
 
 
-class SensitivityModelSENSE(nn.Module):
+class SensitivityModelSENSE_Noacs(nn.Module):
     """
     Model for learning sensitivity estimation from k-space data.
 
@@ -98,35 +98,22 @@ class SensitivityModelSENSE(nn.Module):
 
     def forward(
         self,
-        masked_kspace: torch.Tensor,
+        ACS_kspace: torch.Tensor,
         mask: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
-        device = masked_kspace.device
-        if self.mask_center:
-            pad, num_low_freqs = self.get_pad_and_num_low_freqs(
-                mask, num_low_frequencies
-            )
-            masked_kspace = transforms.batched_mask_center(
-                masked_kspace, pad, pad + num_low_freqs
-            )
-        pd = 30
-        ACS_MASK = torch.zeros(masked_kspace.shape).to(device)
-        h = int(masked_kspace.shape[-3])
-        w = int(masked_kspace.shape[-2])
-        ACS_MASK[...,int(h/2)-pd:int(h/2)+pd,int(w/2)-pd:int(w/2)+pd,:] = 1
-        ACS_kspace = masked_kspace*ACS_MASK
+        device = ACS_kspace.device
         # convert to image space
         images, batches = self.chans_to_batch_dim(fastmri.ifft2c(ACS_kspace.to(device)))
         np.save('SENSE_ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
-        del masked_kspace, mask,ACS_MASK
+        del mask
         # estimate sensitivities
         return self.divide_root_sum_of_squares(
             self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
         ),ACS_kspace
 
 
-class SENSEModel(nn.Module):
+class SENSEModel_NoAcs(nn.Module):
     """
     A full variational network model.
 
@@ -159,7 +146,7 @@ class SENSEModel(nn.Module):
         """
         super().__init__()
 
-        self.sens_net = SensitivityModelSENSE(
+        self.sens_net = SensitivityModelSENSE_Noacs(
             chans=sens_chans,
             num_pools=sens_pools,
             mask_center=mask_center,
@@ -170,12 +157,13 @@ class SENSEModel(nn.Module):
         self,
         masked_kspace: torch.Tensor,
         real_masked_kspace: torch.Tensor,
+        acs_kspace:torch.Tensor,
         mask: torch.Tensor,
         real_mask: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
         device = real_masked_kspace.device
-        sens_maps,ACS_kspace = self.sens_net(masked_kspace, mask, num_low_frequencies)
+        sens_maps,ACS_kspace = self.sens_net(acs_kspace.float(), mask, num_low_frequencies)
         R = self.racc
         # print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:",R)
         acc_factor = torch.tensor(R)
