@@ -386,10 +386,14 @@ class SliceDataset(torch.utils.data.Dataset):
             kspace = hf["kspace"][dataslice]
 
             mask = np.asarray(hf["mask"]) if "mask" in hf else None
-
-            target = hf[self.recons_key][dataslice] if self.recons_key in hf else None
-            kspace = fft2c(center_crop(ifft2c(kspace),target.shape))
+            gold_sens = hf['sens_map'][dataslice]
+            HEIGHT, WEIGHT = gold_sens.shape[1:]
+            # target = hf[self.recons_key][dataslice] if self.recons_key in hf else None
+            crop_image=center_crop(ifft2c(kspace),(HEIGHT, WEIGHT))
+            kspace = fft2c(crop_image)
             kspace = kspace.astype(np.complex64)
+            target = np.sum((crop_image * np.conj(gold_sens)),axis=0)##(384,384)
+            target = abs(target)
             attrs = dict(hf.attrs)
             attrs.update(metadata)
 

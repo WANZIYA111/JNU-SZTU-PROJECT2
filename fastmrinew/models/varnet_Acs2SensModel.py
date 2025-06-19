@@ -117,11 +117,11 @@ class SensitivityModel1(nn.Module):
         # convert to image space
         images, batches = self.chans_to_batch_dim(fastmri.ifft2c(ACS_kspace))
         np.save('ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
-        del masked_kspace, mask,ACS_MASK,ACS_kspace
+        del masked_kspace, mask,ACS_MASK
         # estimate sensitivities
         return self.divide_root_sum_of_squares(
             self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
-        )
+        ),ACS_kspace
 
 
 class VarNet1(nn.Module):
@@ -173,12 +173,12 @@ class VarNet1(nn.Module):
         real_mask: torch.Tensor,
         num_low_frequencies: Optional[int] = None,
     ) -> torch.Tensor:
-        sens_maps = self.sens_net(masked_kspace, mask, num_low_frequencies)
+        sens_maps,ACS_kspace = self.sens_net(masked_kspace, mask, num_low_frequencies)
         kspace_pred = real_masked_kspace.clone()
 
         for cascade in self.cascades:
             kspace_pred = cascade(kspace_pred,real_masked_kspace, real_mask, sens_maps)
 
-        return fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1),sens_maps
+        return abs(fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1)),sens_maps,ACS_kspace
 
 

@@ -92,13 +92,14 @@ def build_args():
     
 
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "sense_train_ssim_loss" / "sense_demo"
+    default_root_dir = fetch_dir("log_path", path_config) / "baseline_default_sense_train_ssim_loss" / "sense_demo"
 
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)
     parser.add_argument("--mask_type", choices=("random", "equispaced_fraction"), default="equispaced_fraction", type=str)
     parser.add_argument("--center_fractions", nargs="+", default=[0.15625], type=float)
     parser.add_argument("--accelerations", nargs="+", default=[3], type=int)
+    
 
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
@@ -136,6 +137,7 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Checkpoint path for resume")
 
     args = parser.parse_args()
+    args.default_root_dir = fetch_dir("log_path", path_config) / f"baseline_{args.racc}x_sense_train_ssim_loss" / "sense_demo"
 
     # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"

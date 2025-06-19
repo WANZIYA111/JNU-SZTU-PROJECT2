@@ -35,6 +35,7 @@ class VarNetModule1V2(MriModule):
 
     def __init__(
         self,
+        racc:int,
         num_cascades: int = 12,
         pools: int = 4,
         chans: int = 18,
@@ -74,6 +75,7 @@ class VarNetModule1V2(MriModule):
         self.save_hyperparameters()
 
         self.num_cascades = num_cascades
+        self.racc = racc
         self.pools = pools
         self.chans = chans
         self.sens_pools = sens_pools
@@ -97,23 +99,23 @@ class VarNetModule1V2(MriModule):
         return self.varnet(masked_kspace,real_masked_kspace, mask, real_mask,num_low_frequencies)
 
     def training_step(self, batch, batch_idx):
-        output,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
+        output,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
 
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         loss = self.loss(
-            output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
+                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
         )
         
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        output,sens_maps= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
+        output,sens_maps,ACS_kspace= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         
         # np.save('batch.real_masked_kspace',torch.view_as_complex(batch.real_masked_kspace).detach().cpu().numpy())
         
-        output_dir = "output"
+        output_dir = f"baseline_acs2sens_varnet_{self.racc}x_output"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")
         target_dir = os.path.join(output_dir, "target")
@@ -129,16 +131,17 @@ class VarNetModule1V2(MriModule):
         np.save(sens_filename, torch.view_as_complex(sens_maps).detach().cpu().numpy())
         np.save(recon_filename, output.detach().cpu().numpy())
         np.save(GT_filename, target.detach().cpu().numpy())
+        np.savez(f'baseline_{self.racc}_VARNET_tmp_ssimloss.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),recon=output.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(ACS_kspace).detach().cpu().numpy(),target = target.detach().cpu().numpy())
         
         return {
             "batch_idx": batch_idx,
             "fname": batch.fname,
             "slice_num": batch.slice_num,
             "max_value": batch.max_value,
-            "output": output,
-            "target": target,
+            "output": output/output.max(),
+            "target": target/target.max(),
             "val_loss": self.loss(
-                output.unsqueeze(1), target.unsqueeze(1), data_range=batch.max_value
+                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
             ),
         }
 

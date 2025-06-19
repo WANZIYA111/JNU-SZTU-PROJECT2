@@ -106,7 +106,7 @@ class SENSEModule_ssimloss(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
 
         loss = self.loss(
-                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                (output.unsqueeze(1)/output.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
         )
 
         self.log("train_loss", loss)
@@ -118,7 +118,7 @@ class SENSEModule_ssimloss(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         
         # print("batch.target",batch.target.shape)
-        output_dir = "sense_output_ssimloss"
+        output_dir = f"baseline_{self.racc}x_sense_output_ssimloss"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")
         target_dir = os.path.join(output_dir, "target")
@@ -138,7 +138,7 @@ class SENSEModule_ssimloss(MriModuleV2):
         np.save(recon_filename, output.detach().cpu().numpy())
         np.save(GT_filename, target.detach().cpu().numpy())
         
-        np.savez('sense_tmp_ssimloss.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target.detach().cpu().numpy())
+        np.savez(f'baseline_{self.racc}_sense_tmp_ssimloss.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target.detach().cpu().numpy())
         
         
         return {
@@ -149,20 +149,9 @@ class SENSEModule_ssimloss(MriModuleV2):
             "output": output/output.max(),
             "target": target/target.max(),
             "val_loss": self.loss(
-                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                (output.unsqueeze(1)/output.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
             ),
         }
-
-    def test_step(self, batch, batch_idx):
-        output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
-
-        # check for FLAIR 203
-        if output.shape[-1] < batch.crop_size[1]:
-            crop_size = (output.shape[-1], output.shape[-1])
-        else:
-            crop_size = batch.crop_size
-
-        output = transforms.center_crop(output, crop_size)
 
     def test_step(self, batch, batch_idx):
         output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)

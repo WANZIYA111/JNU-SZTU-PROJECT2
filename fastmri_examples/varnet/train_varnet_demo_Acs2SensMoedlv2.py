@@ -31,11 +31,12 @@ def cli_main(args):
         test_path=args.test_path,
         sample_rate=args.sample_rate,
         batch_size=args.batch_size,
-        num_workers=0,
+        num_workers=args.num_workers,
         distributed_sampler=(args.accelerator in ("ddp", "ddp_cpu")),
     )
 
     model = VarNetModule1(
+        racc=args.racc,
         num_cascades=args.num_cascades,
         pools=args.pools,
         chans=args.chans,
@@ -73,15 +74,17 @@ def build_args():
 
     # Basic args
     path_config = pathlib.Path("../../fastmri_dirs.yaml")
+    backend = "ddp"
     batch_size = 1
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "varnet_train" / "varnet_demo"
-
+    
+    default_root_dir = fetch_dir("log_path", path_config) / "baseline_varnet_default_acs2sens_ssimloss" / "varnet_demo"
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)
     parser.add_argument("--mask_type", choices=("random", "equispaced_fraction"), default="equispaced_fraction", type=str)
     parser.add_argument("--center_fractions", nargs="+", default=[0.15625], type=float)
     parser.add_argument("--accelerations", nargs="+", default=[3], type=int)
+    
 
     # Data config
     parser = FastMriDataModule.add_data_specific_args(parser)
@@ -119,10 +122,11 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Path to checkpoint for resuming")
 
     args = parser.parse_args()
-
+    args.default_root_dir = fetch_dir("log_path", path_config) / f"baseline_varnet_{args.racc}x_acs2sens_ssimloss" / "varnet_demo"
     # Callbacks
     checkpoint_dir = args.default_root_dir / "checkpoints"
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    if not checkpoint_dir.exists():
+        checkpoint_dir.mkdir(parents=True)
     args.callbacks = [
         pl.callbacks.ModelCheckpoint(
             dirpath=checkpoint_dir,

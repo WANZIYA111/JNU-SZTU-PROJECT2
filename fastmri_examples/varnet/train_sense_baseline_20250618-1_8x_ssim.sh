@@ -1,5 +1,5 @@
-CUDA_VISIBLE_DEVICES=5 python train_varnet_demo_Acs2SensMoedlv2.py \
-    --racc 7 \
+CUDA_VISIBLE_DEVICES=1 python train_SENSE_demo_Acs2SensMoedlv2_ssimloss.py \
+    --racc 8 \
     --num_workers 0 \
     --challenge multicoil \
     --data_path 'COIL_FASTMRI_noshift_50' \
