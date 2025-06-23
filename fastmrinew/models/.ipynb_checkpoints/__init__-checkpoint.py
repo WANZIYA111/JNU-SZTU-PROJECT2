@@ -11,4 +11,5 @@ from .unet import Unet
 from .varnet import NormUnet, SensitivityModel, VarNet, VarNetBlock
 from .varnet_Acs2SensModel import SensitivityModel1, VarNet1
 from .varnet_NoAcs2SensModel import SensitivityModelNoAcs,VarNetNoAcs
-from .SENSE_Acs2SensModel import SensitivityModelSENSE,SENSE
+from .SENSE_Acs2SensModel import SensitivityModelSENSE,SENSEModel
+from .SENSE_NoAcs2SensModel import SensitivityModelSENSE_Noacs,SENSEModel_NoAcs

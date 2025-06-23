@@ -137,7 +137,7 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Checkpoint path for resume")
 
     args = parser.parse_args()
-    args.default_root_dir = fetch_dir("log_path", path_config) / f"baseline_{args.racc}x_sense_train_ssim_loss" / "sense_demo"
+    args.default_root_dir = fetch_dir("log_path", path_config) / f"exp_{args.racc}x_sense_train_ssim_loss_new" / "sense_demo"
 
     # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"

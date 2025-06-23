@@ -93,7 +93,7 @@ def build_args():
     
 
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "sense_train_ssim_loss_noacs" / "sense_demo"
+    default_root_dir = fetch_dir("log_path", path_config) / "sense_train_ssim_loss_noacs_weight" / "sense_demo"
 
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)
@@ -137,7 +137,7 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Checkpoint path for resume")
 
     args = parser.parse_args()
-
+    args.default_root_dir = fetch_dir("log_path", path_config) / f"exp_{args.racc}_sense_train_ssim_loss_noacs_weight" / "sense_demo"
     # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"
     if not checkpoint_dir.exists():

@@ -89,7 +89,7 @@ def build_args():
     batch_size = 1
     
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / f"varnet_default" / "noacs2sensitivity"
+    default_root_dir = fetch_dir("log_path", path_config) / f"experiment_1casca_varnet_noacs_default" / "noacs2sensitivity"
 
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)
@@ -133,7 +133,7 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Checkpoint path for resume")
 
     args = parser.parse_args()
-    default_root_dir = fetch_dir("log_path", path_config) / f"varnet_{args.racc}" / "noacs2sensitivity"
+    args.default_root_dir = fetch_dir("log_path", path_config) / f"experiment_{args.racc}x_1casca_varnet_noacs"  / "noacs2sensitivity"
     # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"
     if not checkpoint_dir.exists():

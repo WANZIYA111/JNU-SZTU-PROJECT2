@@ -203,11 +203,14 @@ class SliceDataset_NoAcs(torch.utils.data.Dataset):
             ACS_KSPACE = hf[key_name][dataslice]
             mask = np.asarray(hf["mask"]) if "mask" in hf else None
             # print("mask",mask)=None
-
-            target = hf[self.recons_key][dataslice] if self.recons_key in hf else None
-            # print("target",target.shape)(384, 384)
-            kspace = fft2c(center_crop(ifft2c(kspace),target.shape))
+            gold_sens = hf['sens_map'][dataslice]
+            HEIGHT, WEIGHT = gold_sens.shape[1:]
+            # target = hf[self.recons_key][dataslice] if self.recons_key in hf else None
+            crop_image=center_crop(ifft2c(kspace),(HEIGHT, WEIGHT))
+            kspace = fft2c(crop_image)
             kspace = kspace.astype(np.complex64)
+            target = np.sum((crop_image * np.conj(gold_sens)),axis=0)##(384,384)
+            target = abs(target)
             attrs = dict(hf.attrs)
             attrs.update(metadata)
 

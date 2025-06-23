@@ -106,7 +106,7 @@ class SENSEModule_ssimloss(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
 
         loss = self.loss(
-                (output.unsqueeze(1)/output.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                (output.unsqueeze(1)/target.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
         )
 
         self.log("train_loss", loss)
@@ -118,7 +118,7 @@ class SENSEModule_ssimloss(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         
         # print("batch.target",batch.target.shape)
-        output_dir = f"baseline_{self.racc}x_sense_output_ssimloss"
+        output_dir = f"exp_{self.racc}x_sense_output_ssimloss_new"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")
         target_dir = os.path.join(output_dir, "target")
@@ -146,10 +146,10 @@ class SENSEModule_ssimloss(MriModuleV2):
             "fname": batch.fname,
             "slice_num": batch.slice_num,
             "max_value": batch.max_value,
-            "output": output/output.max(),
+            "output": output/target.max(),
             "target": target/target.max(),
             "val_loss": self.loss(
-                (output.unsqueeze(1)/output.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                (output.unsqueeze(1)/target.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
             ),
         }
 

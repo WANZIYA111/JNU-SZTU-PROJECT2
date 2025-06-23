@@ -167,6 +167,6 @@ class VarNetNoAcs(nn.Module):
         for cascade in self.cascades:
             kspace_pred = cascade(kspace_pred,real_masked_kspace, real_mask, sens_maps)
 
-        return fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1),sens_maps
+        return abs(fastmri.rss(fastmri.complex_abs(fastmri.ifft2c(kspace_pred)), dim=1)),sens_maps
 
 

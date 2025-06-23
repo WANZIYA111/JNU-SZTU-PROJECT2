@@ -103,7 +103,7 @@ class VarNetModule1V2(MriModule):
 
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         loss = self.loss(
-                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                (output.unsqueeze(1)/output.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
         )
         
         self.log("train_loss", loss)
@@ -141,7 +141,7 @@ class VarNetModule1V2(MriModule):
             "output": output/output.max(),
             "target": target/target.max(),
             "val_loss": self.loss(
-                output.unsqueeze(1)/output.max(), target.unsqueeze(1)/target.max(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                (output.unsqueeze(1)/output.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
             ),
         }
 

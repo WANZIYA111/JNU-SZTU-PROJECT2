@@ -198,6 +198,7 @@ class SliceDatasetSense_noacs(torch.utils.data.Dataset):
 
         with h5py.File(fname, "r") as hf:
             kspace = hf["kspace"][dataslice]
+            sens_weight = abs(hf['weights'][dataslice])
             key_name = f'no_acs_kspace_{self.racc}x'
             ACS_KSPACE = hf[key_name][dataslice]
 
@@ -211,6 +212,11 @@ class SliceDatasetSense_noacs(torch.utils.data.Dataset):
             kspace = kspace.astype(np.complex64)
             target = np.sum((crop_image * np.conj(gold_sens)),axis=0)##(384,384)
             target = abs(target)
+            sens_weight_mask = np.zeros_like(sens_weight)
+            sens_weight_mask[sens_weight > 0.96] = 1
+            target = target*sens_weight_mask
+
+            
             attrs = dict(hf.attrs)
             attrs.update(metadata)
 

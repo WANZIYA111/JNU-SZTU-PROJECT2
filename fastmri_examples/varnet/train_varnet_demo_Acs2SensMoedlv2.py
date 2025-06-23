@@ -9,7 +9,9 @@ from fastmrinew.data.mri_data import fetch_dir
 from fastmrinew.data.subsample import create_mask_for_mask_type
 from fastmrinew.data.transforms_acs import VarNetDataTransform1
 from fastmrinew.pl_modules import FastMriDataModule, VarNetModule1V2 as VarNetModule1
-
+from torch.serialization import add_safe_globals
+import pathlib
+add_safe_globals([pathlib.PosixPath])
 def cli_main(args):
     pl.seed_everything(args.seed)
 
