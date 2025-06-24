@@ -19,3 +19,7 @@ from .SENSE_module_ssimloss import SENSEModule_ssimloss
 from .SENSE_module_ssimloss_Noacs2SensARecon import SENSEModule_ssimloss_noacs
 from .data_modules_sense import FastMriDataModuleSENSE
 from .data_modules_sense_NoAcs2SensModel import FastMriDataModuleSENSE_noacs
+from .SENSE_module_psnrloss import SENSEModule_psnrloss
+from .SENSE_module_psnrloss_Noacs2SensARecon import SENSEModule_psnrloss_noacs
+from .SENSE_module_mseloss import SENSEModule_mseloss
+from .SENSE_module_mseloss_Noacs2SensARecon import SENSEModule_mseloss_noacs

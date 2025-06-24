@@ -11,12 +11,12 @@ import torch
 
 import fastmrinew
 from fastmrinew.data import transforms
-from fastmrinew.models import SENSEModel_NoAcs
-
+from fastmrinew.models import SENSEModel
+import torch.nn.functional as F
 from .mri_moduleV2 import MriModuleV2
 
 
-class SENSEModule_ssimloss_noacs(MriModuleV2):
+class SENSEModule_mseloss(MriModuleV2):
     """
     VarNet training module.
 
@@ -85,7 +85,7 @@ class SENSEModule_ssimloss_noacs(MriModuleV2):
         self.lr_gamma = lr_gamma
         self.weight_decay = weight_decay
 
-        self.sense = SENSEModel_NoAcs(
+        self.sense = SENSEModel(
             racc = self.racc,
             num_cascades=self.num_cascades,
             sens_chans=self.sens_chans,
@@ -93,38 +93,36 @@ class SENSEModule_ssimloss_noacs(MriModuleV2):
             chans=self.chans,
             pools=self.pools,
         )
-
-        self.loss = fastmrinew.SSIMLoss()
+    
         
 
-    def forward(self, masked_kspace,real_masked_kspace, acs_kspace, mask, real_mask,num_low_frequencies):
-        return self.sense(masked_kspace,real_masked_kspace, acs_kspace, mask, real_mask,num_low_frequencies)
+    def forward(self, masked_kspace,real_masked_kspace, mask, real_mask,num_low_frequencies):
+        return self.sense(masked_kspace,real_masked_kspace, mask, real_mask,num_low_frequencies)
 
     def training_step(self, batch, batch_idx):
-        output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.acs_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
+        output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
 
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         target_norm = (target.unsqueeze(1)/target.max()).float()
         output_norm = (output.unsqueeze(1)/target.max()).float()
         target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
         output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
-        loss = self.loss(
-                output_norm, target_norm, data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
-        )
+        mse_loss_value = F.mse_loss(output_norm, target_norm)
 
-        self.log("train_loss", loss)
+        self.log("train_loss", mse_loss_value)
 
-        return loss
+        return mse_loss_value
 
     def validation_step(self, batch, batch_idx):
-        output,sens_maps,acs_kspace0,masked_kspace0= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.acs_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
+        output,sens_maps,acs_kspace0,masked_kspace0= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         target_norm = (target.unsqueeze(1)/target.max()).float()
         output_norm = (output.unsqueeze(1)/target.max()).float()
         target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
         output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
         
-        output_dir = f"exp_{self.racc}x_sense_output_ssimloss_noacs_weight"
+        # print("batch.target",batch.target.shape)
+        output_dir = f"exp_{self.racc}x_sense_output_mseloss_new"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")
         target_dir = os.path.join(output_dir, "target")
@@ -144,7 +142,7 @@ class SENSEModule_ssimloss_noacs(MriModuleV2):
         np.save(recon_filename, output.detach().cpu().numpy())
         np.save(GT_filename, target.detach().cpu().numpy())
         
-        np.savez('sense_tmp_ssimloss_noacs_weight.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output_norm.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target_norm.detach().cpu().numpy())
+        np.savez(f'exp_{self.racc}_sense_tmp_mseloss.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output_norm.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target_norm.detach().cpu().numpy())
         return {
             "batch_idx": batch_idx,
             "fname": batch.fname,
@@ -152,9 +150,7 @@ class SENSEModule_ssimloss_noacs(MriModuleV2):
             "max_value": batch.max_value,
             "output": output_norm.squeeze(1),
             "target": target_norm.squeeze(1),
-            "val_loss": self.loss(
-                output_norm, target_norm, data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
-            ),
+            "val_loss": F.mse_loss(output_norm, target_norm),
         }
 
     def test_step(self, batch, batch_idx):

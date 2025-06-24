@@ -104,9 +104,12 @@ class SENSEModule_ssimloss(MriModuleV2):
         output,_,_,_= self(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
 
         target, output = transforms.center_crop_to_smallest(batch.target, output)
-
+        target_norm = (target.unsqueeze(1)/target.max()).float()
+        output_norm = (output.unsqueeze(1)/target.max()).float()
+        target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
+        output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
         loss = self.loss(
-                (output.unsqueeze(1)/target.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                output_norm, target_norm, data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
         )
 
         self.log("train_loss", loss)
@@ -116,8 +119,11 @@ class SENSEModule_ssimloss(MriModuleV2):
     def validation_step(self, batch, batch_idx):
         output,sens_maps,acs_kspace0,masked_kspace0= self.forward(batch.masked_kspace, batch.real_masked_kspace,batch.mask, batch.real_mask,batch.num_low_frequencies)
         target, output = transforms.center_crop_to_smallest(batch.target, output)
+        target_norm = (target.unsqueeze(1)/target.max()).float()
+        output_norm = (output.unsqueeze(1)/target.max()).float()
+        target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
+        output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
         
-        # print("batch.target",batch.target.shape)
         output_dir = f"exp_{self.racc}x_sense_output_ssimloss_new"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")
@@ -138,18 +144,16 @@ class SENSEModule_ssimloss(MriModuleV2):
         np.save(recon_filename, output.detach().cpu().numpy())
         np.save(GT_filename, target.detach().cpu().numpy())
         
-        np.savez(f'baseline_{self.racc}_sense_tmp_ssimloss.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target.detach().cpu().numpy())
-        
-        
+        np.savez(f'baseline_{self.racc}_sense_tmp_ssimloss.npz',sens_maps=torch.view_as_complex(sens_maps).detach().cpu().numpy(),gold_sens=(batch.gold_sens).detach().cpu().numpy(),recon=output_norm.detach().cpu().numpy(),kspace_input_sensmap=torch.view_as_complex(acs_kspace0).detach().cpu().numpy(),kspace_input_varnet=torch.view_as_complex(masked_kspace0).detach().cpu().numpy(),target = target_norm.detach().cpu().numpy())
         return {
             "batch_idx": batch_idx,
             "fname": batch.fname,
             "slice_num": batch.slice_num,
             "max_value": batch.max_value,
-            "output": output/target.max(),
-            "target": target/target.max(),
+            "output": output_norm.squeeze(1),
+            "target": target_norm.squeeze(1),
             "val_loss": self.loss(
-                (output.unsqueeze(1)/target.max()).float(), (target.unsqueeze(1)/target.max()).float(), data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
+                output_norm, target_norm, data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
             ),
         }
 

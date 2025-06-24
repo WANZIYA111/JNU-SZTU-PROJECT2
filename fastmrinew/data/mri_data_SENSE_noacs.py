@@ -212,17 +212,17 @@ class SliceDatasetSense_noacs(torch.utils.data.Dataset):
             kspace = kspace.astype(np.complex64)
             target = np.sum((crop_image * np.conj(gold_sens)),axis=0)##(384,384)
             target = abs(target)
-            sens_weight_mask = np.zeros_like(sens_weight)
+            sens_weight_mask = sens_weight
             sens_weight_mask[sens_weight > 0.96] = 1
-            target = target*sens_weight_mask
+            sens_weight_mask = sens_weight_mask**6
 
             
             attrs = dict(hf.attrs)
             attrs.update(metadata)
 
         if self.transform is None:
-            sample = (kspace, ACS_KSPACE,gold_sens,mask, target, attrs, fname.name, dataslice)
+            sample = (kspace, ACS_KSPACE,gold_sens,mask, target,sens_weight_mask, attrs, fname.name, dataslice)
         else:
-            sample = self.transform(kspace, ACS_KSPACE,gold_sens,mask, target, attrs, fname.name, dataslice)
+            sample = self.transform(kspace, ACS_KSPACE,gold_sens,mask, target, sens_weight_mask,attrs, fname.name, dataslice)
 
         return sample

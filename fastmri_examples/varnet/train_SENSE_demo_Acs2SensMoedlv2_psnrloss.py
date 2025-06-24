@@ -10,7 +10,7 @@ from torch.serialization import add_safe_globals
 from fastmrinew.data.mri_data import fetch_dir
 from fastmrinew.data.subsample import create_mask_for_mask_type
 from fastmrinew.data.transforms_acs_SENSE import SENSEDataTransform
-from fastmrinew.pl_modules import FastMriDataModuleSENSE as FastMriDataModule, SENSEModule_ssimloss as SENSEModule 
+from fastmrinew.pl_modules import FastMriDataModuleSENSE as FastMriDataModule, SENSEModule_psnrloss as SENSEModule
 
 add_safe_globals([pathlib.PosixPath])
 
@@ -92,7 +92,7 @@ def build_args():
     
 
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "baseline_default_sense_train_ssim_loss" / "sense_demo"
+    default_root_dir = fetch_dir("log_path", path_config) / "baseline_default_sense_train_psnr_loss" / "sense_demo"
 
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)
@@ -137,7 +137,7 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Checkpoint path for resume")
 
     args = parser.parse_args()
-    args.default_root_dir = fetch_dir("log_path", path_config) / f"exp_{args.racc}x_sense_train_ssim_loss_new" / "sense_demo"
+    args.default_root_dir = fetch_dir("log_path", path_config) / f"exp_{args.racc}x_sense_train_psnr_loss_new" / "sense_demo"
 
     # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"

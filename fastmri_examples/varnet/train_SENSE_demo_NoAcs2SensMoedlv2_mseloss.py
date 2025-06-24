@@ -9,8 +9,8 @@ import pytorch_lightning as pl
 from torch.serialization import add_safe_globals
 from fastmrinew.data.mri_data import fetch_dir
 from fastmrinew.data.subsample import create_mask_for_mask_type
-from fastmrinew.data.transforms_acs_SENSE import SENSEDataTransform
-from fastmrinew.pl_modules import FastMriDataModuleSENSE as FastMriDataModule, SENSEModule_ssimloss as SENSEModule 
+from fastmrinew.data.transforms_noacs_SENSE import SENSEDataTransform_noacs as SENSEDataTransform
+from fastmrinew.pl_modules import FastMriDataModuleSENSE_noacs as FastMriDataModule, SENSEModule_mseloss_noacs as SENSEModule
 
 add_safe_globals([pathlib.PosixPath])
 
@@ -29,6 +29,7 @@ def cli_main(args):
 
     data_module = FastMriDataModule(
         data_path=args.data_path,
+        racc=args.racc,
         challenge=args.challenge,
         train_transform=train_transform,
         val_transform=val_transform,
@@ -92,14 +93,13 @@ def build_args():
     
 
     data_path = fetch_dir("knee_path", path_config)
-    default_root_dir = fetch_dir("log_path", path_config) / "baseline_default_sense_train_ssim_loss" / "sense_demo"
+    default_root_dir = fetch_dir("log_path", path_config) / "sense_train_mse_loss_noacs_weight" / "sense_demo"
 
     parser.add_argument("--mode", default="train", choices=("train", "test"), type=str)
     parser.add_argument("--racc", required=True, type=int)
     parser.add_argument("--mask_type", choices=("random", "equispaced_fraction"), default="equispaced_fraction", type=str)
     parser.add_argument("--center_fractions", nargs="+", default=[0.15625], type=float)
     parser.add_argument("--accelerations", nargs="+", default=[3], type=int)
-    
 
     # data config
     parser = FastMriDataModule.add_data_specific_args(parser)
@@ -137,8 +137,7 @@ def build_args():
     parser.add_argument("--ckpt_path", default=None, type=str, help="Checkpoint path for resume")
 
     args = parser.parse_args()
-    args.default_root_dir = fetch_dir("log_path", path_config) / f"exp_{args.racc}x_sense_train_ssim_loss_new" / "sense_demo"
-
+    args.default_root_dir = fetch_dir("log_path", path_config) / f"exp_{args.racc}_sense_train_mse_loss_noacs_weight" / "sense_demo"
     # configure checkpointing in checkpoint_dir
     checkpoint_dir = args.default_root_dir / "checkpoints"
     if not checkpoint_dir.exists():

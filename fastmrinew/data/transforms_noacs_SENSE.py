@@ -30,6 +30,7 @@ class SENSESample_noacs(NamedTuple):
     gold_sens:torch.Tensor
     mask: torch.Tensor
     real_mask: torch.Tensor
+    weight_mask: torch.Tensor
     num_low_frequencies: Optional[int]
     target: torch.Tensor
     fname: str
@@ -62,6 +63,7 @@ class SENSEDataTransform_noacs:
         gold_sens : np.ndarray,
         mask: np.ndarray,
         target: Optional[np.ndarray],
+        sens_weight_mask: np.ndarray,
         attrs: Dict,
         fname: str,
         slice_num: int,
@@ -122,6 +124,7 @@ class SENSEDataTransform_noacs:
                 gold_sens = gold_sens,
                 mask=mask_torch.to(torch.bool),
                 real_mask = real_mask.to(torch.bool),
+                weight_mask = torch.from_numpy(sens_weight_mask).to(torch.bool),
                 num_low_frequencies=num_low_frequencies,
                 target=target_torch,
                 fname=fname,
