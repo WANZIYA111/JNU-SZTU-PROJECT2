@@ -121,10 +121,12 @@ class SensitivityModelSENSE(nn.Module):
         # np.save('SENSE_ACS_kspace',torch.view_as_complex(ACS_kspace).detach().cpu().numpy())
         del masked_kspace, mask,ACS_MASK
         # estimate sensitivities
-        return self.divide_root_sum_of_squares(
-            self.batch_chans_to_chan_dim(self.norm_unet(images), batches)
-        ),ACS_kspace
-
+        '''
+        code by wangyuwan
+        '''
+        unet_images,unet_weight_mask = self.norm_unet(images) 
+        weight_unet_images = self.batch_chans_to_chan_dim(unet_images, batches)*self.batch_chans_to_chan_dim(unet_weight_mask, batches)
+        return self.divide_root_sum_of_squares(weight_unet_images),ACS_kspace
 
 
 class SENSEModel(nn.Module):

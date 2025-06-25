@@ -105,8 +105,7 @@ class SENSEModule_mseloss_noacs(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         target_norm = (target.unsqueeze(1)/target.max()).float()
         output_norm = (output.unsqueeze(1)/target.max()).float()
-        target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
-        output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
+
         mse_loss_value = F.mse_loss(output_norm, target_norm)
 
         self.log("train_loss", mse_loss_value)
@@ -118,10 +117,8 @@ class SENSEModule_mseloss_noacs(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         target_norm = (target.unsqueeze(1)/target.max()).float()
         output_norm = (output.unsqueeze(1)/target.max()).float()
-        target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
-        output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
         
-        # print("batch.target",batch.target.shape)
+        
         output_dir = f"exp_{self.racc}x_sense_output_mseloss_noacs_weight"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
         recon_dir = os.path.join(output_dir, "recon")

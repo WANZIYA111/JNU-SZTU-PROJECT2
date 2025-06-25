@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import fastmrinew
 from fastmrinew.data import transforms
 
-from .unet import Unet
+from .unet import Unet_weight_mask as Unet
 
 
 class NormUnet(nn.Module):
@@ -116,14 +116,20 @@ class NormUnet(nn.Module):
         x, mean, std = self.norm(x)
         x, pad_sizes = self.pad(x)
 
-        x = self.unet(x)
+        x,weight_mask_unet = self.unet(x)
 
         # get shapes back and unnormalize
         x = self.unpad(x, *pad_sizes)
         x = self.unnorm(x, mean, std)
         x = self.chan_complex_to_last_dim(x)
+        '''
+        code by wangyuwan
+        '''
+        weight_mask_unet = self.unpad(weight_mask_unet, *pad_sizes)
+        weight_mask_unet = self.unnorm(weight_mask_unet, mean, std)
+        weight_mask_unet = self.chan_complex_to_last_dim(weight_mask_unet)
 
-        return x
+        return x,weight_mask_unet
 
 
 class SensitivityModel(nn.Module):
@@ -216,7 +222,6 @@ class SensitivityModel(nn.Module):
 
         # convert to image space
         images, batches = self.chans_to_batch_dim(fastmrinew.ifft2c(masked_kspace))
-
         # estimate sensitivities
         return self.divide_root_sum_of_squares(
             self.batch_chans_to_chan_dim(self.norm_unet(images), batches)

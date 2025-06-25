@@ -105,8 +105,7 @@ class SENSEModule_psnrloss_noacs(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         target_norm = (target.unsqueeze(1)/target.max()).float()
         output_norm = (output.unsqueeze(1)/target.max()).float()
-        target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
-        output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
+
         psnr_value = psnr(
                 output_norm, target_norm, data_range=torch.tensor(1.0, device=output.device).unsqueeze(0)
         )
@@ -120,8 +119,7 @@ class SENSEModule_psnrloss_noacs(MriModuleV2):
         target, output = transforms.center_crop_to_smallest(batch.target, output)
         target_norm = (target.unsqueeze(1)/target.max()).float()
         output_norm = (output.unsqueeze(1)/target.max()).float()
-        target_norm = target_norm*(batch.weight_mask.unsqueeze(1))
-        output_norm = output_norm*(batch.weight_mask.unsqueeze(1))
+        
         
         output_dir = f"exp_{self.racc}x_sense_output_psnrloss_noacs_weight"
         sens_maps_dir = os.path.join(output_dir, "sens_maps")
